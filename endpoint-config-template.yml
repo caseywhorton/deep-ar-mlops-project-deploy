@@ -50,28 +50,42 @@ Resources:
          - ModelPackageName: !Ref ModelPackageName
       ExecutionRoleArn: !Ref ModelExecutionRoleArn
 
-  EndpointConfig:
-    Type: AWS::SageMaker::EndpointConfig
-    Properties:
-      ProductionVariants:
-        - InitialInstanceCount: !Ref EndpointInstanceCount
-          InitialVariantWeight: 1.0
-          InstanceType: !Ref EndpointInstanceType
-          ModelName: !GetAtt Model.ModelName
-          VariantName: AllTraffic
-      DataCaptureConfig:
-          EnableCapture: !Ref EnableDataCapture 
-          InitialSamplingPercentage: !Ref SamplingPercentage
-          DestinationS3Uri: !Ref DataCaptureUploadPath
-          CaptureOptions:
-            - CaptureMode: Input
-            - CaptureMode: Output
-          CaptureContentTypeHeader:
-            CsvContentTypes:
-              - "text/csv"
 
-  Endpoint:
-    Type: AWS::SageMaker::Endpoint
+  # Common Lambda Role
+  LambdaRole:
+    Type: AWS::IAM::Role
     Properties:
-      EndpointName: !Sub ${SageMakerProjectName}-${StageName}
-      EndpointConfigName: !GetAtt EndpointConfig.EndpointConfigName
+      RoleName: "lambda-role-example"
+      Description: "Role assigned to lambdas"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource: '*'
+
+  # Lambda
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: "lambda-example"
+      Description: "Lambda example"
+      Code: ./src/
+      Handler: lambda.handler
+      Runtime: python3.9
+      Timeout: 900
+      Role: !GetAtt LambdaRole.Arn
+      PackageType: Zip
+      MemorySize: 128
