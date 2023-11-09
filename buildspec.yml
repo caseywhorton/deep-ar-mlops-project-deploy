@@ -28,4 +28,3 @@ artifacts:
      - package.yml
 #    - $EXPORT_TEMPLATE_NAME
 #    - $EXPORT_TEMPLATE_STAGING_CONFIG
-#    - $EXPORT_TEMPLATE_PROD_CONFIG
