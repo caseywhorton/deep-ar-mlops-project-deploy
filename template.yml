@@ -13,8 +13,7 @@ Resources:
         - Version: 2012-10-17
           Statement:
             - Effect: Allow
-              Action:
-                - lambda:InvokeFunction
+              Action: lambda:InvokeFunction
               Resource: "*"
       DeploymentPreference:
         Type: Linear10PercentEvery1Minute
