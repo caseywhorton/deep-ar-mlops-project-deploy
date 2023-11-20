@@ -18,6 +18,9 @@ def lambda_handler(event, context):
     # Get the object from the event and show its content type
     
     try:
+        print('event')
+        print(event)
+        """
         s3 = boto3.client("s3")
         print('changes')
         bucket = "cw-sagemaker-domain-1"
@@ -79,6 +82,7 @@ def lambda_handler(event, context):
         )
         
         client = boto3.client('sagemaker')
+        """
         print('sagemaker client loaded.')
         #response = client.create_transform_job(
         #TransformJobName='weather-forecast-model-transform',
