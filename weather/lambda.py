@@ -120,4 +120,4 @@ def lambda_handler(event, context):
         print(e)
         raise e
 
-    return None  # ['ContentType']
+    return event  # ['ContentType']
