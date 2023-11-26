@@ -1,28 +1,29 @@
 'use strict';
     
-    const AWS = require('aws-sdk'); 
+    const AWS = require('aws-sdk');
     const codedeploy = new AWS.CodeDeploy({apiVersion: '2014-10-06'});
     var lambda = new AWS.Lambda();
     
     exports.handler = (event, context, callback) => {
     
-    	console.log("Entering PreTraffic Hook!");
+    	console.log("Entering PostTraffic Hook!");
     	
     	// Read the DeploymentId and LifecycleEventHookExecutionId from the event payload
       var deploymentId = event.DeploymentId;
     	var lifecycleEventHookExecutionId = event.LifecycleEventHookExecutionId;
     
     	var functionToTest = process.env.NewVersion;
-    	console.log("BeforeAllowTraffic hook tests started");
+    	console.log("AfterAllowTraffic hook tests started");
     	console.log("Testing new function version: " + functionToTest);
     
     	// Create parameters to pass to the updated Lambda function that
-    	// include the newly added "time" option. If the function did not
-    	// update, then the "time" option is invalid and function returns
+    	// include the original "date" parameter. If the function did not 
+    	// update as expected, then the "date" option might be invalid. If 
+    	// the parameter is invalid, the function returns
     	// a statusCode of 400 indicating it failed.
     	var lambdaParams = {
     		FunctionName: functionToTest,    
-    		Payload: "{\"option\": \"text\"}", 
+    		Payload: "{\"option\": \"date\", \"period\": \"today\"}", 
     		InvocationType: "RequestResponse"
     	};
     
@@ -42,14 +43,14 @@
           // function is 400. If it is, then it failed. If 
           // is not, then it succeeded.
     			if (result.statusCode != "400"){
-            console.log("Validation succeeded");
+            console.log("Validation of time parameter succeeded");
     				lambdaResult = "Succeeded";
           }
           else {
             console.log("Validation failed");
           }
     
-    			// Complete the PreTraffic Hook by sending CodeDeploy the validation status
+    			// Complete the PostTraffic Hook by sending CodeDeploy the validation status
     			var params = {
     				deploymentId: deploymentId,
     				lifecycleEventHookExecutionId: lifecycleEventHookExecutionId,
