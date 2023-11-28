@@ -1,29 +1,36 @@
 import yaml
 
-
 # Define a custom constructor for the !Ref tag
 def ref_constructor(loader, node):
     value = loader.construct_scalar(node)
-    return value  # You can define the behavior for !Ref as needed
-
+    return {"Ref": value}  # Wraps the !Ref value to retain in the YAML
 
 # Add the custom constructor to the YAML loader
 yaml.SafeLoader.add_constructor("!Ref", ref_constructor)
 
-
 # Define a custom constructor for the !Sub tag
 def sub_constructor(loader, node):
     value = loader.construct_scalar(node)
-    return value  # You can define the behavior for !Sub as needed
-
+    return {"Fn::Sub": value}  # Wraps the !Sub value to retain in the YAML
 
 # Add the custom constructor to the YAML loader
 yaml.SafeLoader.add_constructor("!Sub", sub_constructor)
 
+# Define a custom representer for the !Sub tag
+def sub_representer(dumper, data):
+    return dumper.represent_scalar("!Sub", data["Fn::Sub"])  # Represents !Sub as is
 
-def add_environment_variable(
-    template_path, function_name, variable_name, variable_value
-):
+# Add the custom representer to the YAML dumper
+yaml.SafeDumper.add_representer(dict, sub_representer)
+
+# Define a custom representer for the !Ref tag
+def ref_representer(dumper, data):
+    return dumper.represent_scalar("!Ref", data["Ref"])  # Represents !Ref as is
+
+# Add the custom representer to the YAML dumper
+yaml.SafeDumper.add_representer(dict, ref_representer)
+
+def add_environment_variable(template_path, function_name, variable_name, variable_value):
     with open(template_path, "r") as file:
         template = yaml.safe_load(file)
 
@@ -32,20 +39,16 @@ def add_environment_variable(
         if "Properties" in function and "Environment" in function["Properties"]:
             if "Variables" not in function["Properties"]["Environment"]:
                 function["Properties"]["Environment"]["Variables"] = {}
-            function["Properties"]["Environment"]["Variables"][
-                variable_name
-            ] = variable_value
+            function["Properties"]["Environment"]["Variables"][variable_name] = variable_value
         if "Properties" in function and "Environment" not in function["Properties"]:
             # then create an empty dictionary for environment variables
             function["Properties"]["Environment"] = {}
             function["Properties"]["Environment"]["Variables"] = {}
-            function["Properties"]["Environment"]["Variables"][
-                variable_name
-            ] = variable_value
+            function["Properties"]["Environment"]["Variables"][variable_name] = variable_value
 
     with open(template_path, "w") as file:
-        yaml.dump(template, file)
-
+        # Use default_flow_style=False to maintain the YAML formatting
+        yaml.dump(template, file, default_flow_style=False)
 
 # Usage example
 template_path = "template.yml"
@@ -54,9 +57,4 @@ variable_name = "MY_VARIABLE"  # New environment variable name
 variable_value = "my_variable_value"  # New environment variable value
 
 if __name__ == "__main__":
-    # This block of code will execute when the script is run directly
-    # Call your functions or include your logic here
-
-    add_environment_variable(
-        template_path, function_name, variable_name, variable_value
-    )
+    add_environment_variable(template_path, function_name, variable_name, variable_value)
