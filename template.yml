@@ -7,8 +7,8 @@ Resources:
     Type: AWS::SageMaker::Model
     Properties:
       Containers:
-         - ModelPackageName: !Ref ModelPackageName
-      ExecutionRoleArn: !Ref ExecutionRoleArn
+         - ModelPackageName: !Ref model_package_name
+      ExecutionRoleArn: !Ref execution_role_arn
       
   weather:
     Type: AWS::Serverless::Function
