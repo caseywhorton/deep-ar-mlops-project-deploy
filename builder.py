@@ -102,8 +102,8 @@ def add_environment_variables(template_path, function_name, variables):
 if __name__ == "__main__":
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Add environment variables to the SAM template")
-    parser.add_argument("--template_path", type=str, default="template.yml", help="Path to the SAM template file")
-    parser.add_argument("--function_name", type=str, help="Name of the Lambda function")
+    parser.add_argument("--template-path", type=str, default="template.yml", help="Path to the SAM template file")
+    parser.add_argument("--function-name", type=str, help="Name of the Lambda function")
     parser.add_argument("--log-level", type=str, default=os.environ.get("LOGLEVEL", "INFO").upper())
     parser.add_argument("--model-execution-role", type=str, required=True)
     parser.add_argument("--model-package-group-name", type=str, required=True)
