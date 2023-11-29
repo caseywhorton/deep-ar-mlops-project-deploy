@@ -8,7 +8,7 @@ Resources:
     Properties:
       Containers:
          - ModelPackageName: !Ref ModelPackageName
-      ExecutionRoleArn: !Ref ModelExecutionRoleArn
+      ExecutionRoleArn: !Ref ExecutionRoleArn
       
   weather:
     Type: AWS::Serverless::Function
