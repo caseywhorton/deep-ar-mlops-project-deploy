@@ -1,15 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: A sample SAM template for deploying Lambda functions
-Parameters:
-  SageMakerProjectName:
-    Type: String
-    Description: Name of the project
-    MinLength: 1
-    MaxLength: 32
-    AllowedPattern: ^[a-zA-Z](-*[a-zA-Z0-9])*
 
-  
 Resources:
   Model:
     Type: AWS::SageMaker::Model
@@ -17,6 +9,7 @@ Resources:
       Containers:
          - ModelPackageName: !Ref ModelPackageName
       ExecutionRoleArn: !Ref ModelExecutionRoleArn
+      
   weather:
     Type: AWS::Serverless::Function
     Properties:
