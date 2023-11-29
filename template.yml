@@ -21,7 +21,7 @@ Resources:
                 - "lambda:InvokeFunction"
               Resource: '*'
       DeploymentPreference:
-        Type: Linear10PercentEvery1Minute
+        Type: AllAtOnce
         Hooks:
           PreTraffic: !Ref beforeAllowTraffic
           PostTraffic: !Ref afterAllowTraffic
