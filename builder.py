@@ -84,7 +84,7 @@ yaml.SafeDumper.add_representer(dict, ref_ref_representer)
 def add_environment_variables(template_path, function_name, variables):
     with open(template_path, "r") as file:
         template = yaml.safe_load(file)
-
+    logger.info(f"variables: {variables}")
     if "Resources" in template and function_name in template["Resources"]:
         function = template["Resources"][function_name]
         if "Properties" in function and "Environment" in function["Properties"]:
@@ -92,7 +92,8 @@ def add_environment_variables(template_path, function_name, variables):
             function_env.setdefault("Variables", {}).update(variables)
         else:
             function["Properties"]["Environment"] = {"Variables": variables}
-
+    logger.info("template.yml")
+    logger.info(template)
     with open(template_path, "w") as file:
         yaml.dump(template, file, default_flow_style=False)
 
