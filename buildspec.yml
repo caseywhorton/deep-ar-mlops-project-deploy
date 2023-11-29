@@ -19,7 +19,7 @@ phases:
       # Note that the Environment Variables like ARTIFACT_BUCKET, SAGEMAKER_PROJECT_NAME etc,. used below are expected to be setup by the
       # CodeBuild resrouce in the infra pipeline (in the ServiceCatalog product)
       #- aws cloudformation package --template endpoint-config-template.yml --s3-bucket $ARTIFACT_BUCKET --output-template $EXPORT_TEMPLATE_NAME
-      - sam deploy --template-file package.yml --stack-name weather-batch-transform --capabilities CAPABILITY_IAM --parameter-overrides ExecutionRoleArn="$MODEL_EXECUTION_ROLE_ARN" 
+      - sam deploy --template-file package.yml --stack-name weather-batch-transform --capabilities CAPABILITY_IAM --parameter-overrides ExecutionRoleArn="$MODEL_EXECUTION_ROLE_ARN" ModelPackageName="weather-forecast-hourly"
 
       # Print the files to verify contents
       #- cat $EXPORT_TEMPLATE_STAGING_CONFIG
