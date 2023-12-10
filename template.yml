@@ -2,13 +2,24 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: A sample SAM template for deploying Lambda functions
 
+Parameters:
+  ExecutionRoleArn:
+    Type: String
+    Description: Enter the ARN of the execution role for the SageMaker Model
+  ModelNameParameter:
+    Type: String
+    Description: Enter the name of the model
+
+
 Resources:
-  Model:
+  SageMakerModel:
     Type: AWS::SageMaker::Model
     Properties:
-      Containers:
-         - ModelPackageName: !Ref model_package_name
-      ExecutionRoleArn: !Ref execution_role_arn
+      ExecutionRoleArn: !Ref ExecutionRoleArn  # Reference the parameter here
+      ModelName: !Ref ModelNameParameter
+      #Containers:
+      #  - ModelPackageName: arn:aws:sagemaker:us-east-1:536826985609:model-package/weather-forecast-hourly/1
+
       
   weather:
     Type: AWS::Serverless::Function
