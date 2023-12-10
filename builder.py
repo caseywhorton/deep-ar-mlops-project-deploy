@@ -99,6 +99,9 @@ def add_environment_variables(template_path, function_name, variables):
     with open(template_path, "r") as file:
         template = yaml.safe_load(file)
     logger.info(f"variables: {variables}")
+    print(template)
+    print('function_name: ', function_name)
+    print(template["Resources"])
     if "Resources" in template and function_name in template["Resources"]:
         function = template["Resources"][function_name]
         if "Properties" in function and "Environment" in function["Properties"]:
