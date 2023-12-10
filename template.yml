@@ -22,27 +22,28 @@ Resources:
 
       
   weather:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: weather.lambda.lambda_handler
-      Runtime: python3.7
-      Timeout: 300
-      Description: 'Automatically loaded weather batch transform job.'
-      Layers:
-        - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python37:5
-      AutoPublishAlias: live
-      Policies:
-        - Version: "2012-10-17"
-          Statement: 
-            - Effect: "Allow"
-              Action: 
-                - "lambda:InvokeFunction"
-              Resource: '*'
-      DeploymentPreference:
-        Type: AllAtOnce
-        Hooks:
-          PreTraffic: !Ref beforeAllowTraffic
-          PostTraffic: !Ref afterAllowTraffic
+  Type: AWS::Serverless::Function
+  Properties:
+    Handler: weather.lambda.lambda_handler
+    Runtime: python3.7
+    Timeout: 300
+    Description: 'Automatically loaded weather batch transform job.'
+    Layers:
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python37:5
+    AutoPublishAlias: live
+    Policies:
+      - Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: '*'
+      - S3CrudPolicy:
+          BucketName: cw-weather-data-deployment
+    DeploymentPreference:
+      Type: AllAtOnce
+      Hooks:
+        PreTraffic: !Ref beforeAllowTraffic
+        PostTraffic: !Ref afterAllowTraffic
+
 
   beforeAllowTraffic:
     Type: AWS::Serverless::Function
