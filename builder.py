@@ -106,8 +106,7 @@ def add_environment_variables(template_path, function_name, variables):
             function_env.setdefault("Variables", {}).update(variables)
         else:
             function["Properties"]["Environment"] = {"Variables": variables}
-    logger.info("template.yml")
-    logger.info(template)
+    
     with open(template_path, "w") as file:
         yaml.dump(template, file, default_flow_style=False)
 
@@ -147,6 +146,14 @@ if __name__ == "__main__":
         "SAGEMAKER_PROJECT_NAME": args.sagemaker_project_name,
     }
 
+    
+
     # Add environment variables to file
     logger.info(f"Adding environment variables to file: {args.template_path}")
     add_environment_variables(args.template_path, args.function_name, env_dict)
+    
+    with open(args.template_path, "r") as file:
+        template = yaml.safe_load(file)
+        
+    logger.info("template.yml")
+    logger.info(template)
