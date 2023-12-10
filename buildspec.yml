@@ -12,7 +12,6 @@ phases:
     commands:
       # Export the staging and production configuration files
 
-  
       #- python build.py --model-execution-role "$MODEL_EXECUTION_ROLE_ARN" --model-package-group-name "weather-forecast-hourly" --sagemaker-project-id "$SAGEMAKER_PROJECT_ID" --sagemaker-project-name "$SAGEMAKER_PROJECT_NAME" --s3-bucket "$ARTIFACT_BUCKET" --export-staging-config $EXPORT_TEMPLATE_STAGING_CONFIG --export-prod-config $EXPORT_TEMPLATE_PROD_CONFIG
       - python builder.py --function-name weather --model-execution-role "$MODEL_EXECUTION_ROLE_ARN" --model-name "YourSagemakerModelName1" --model-package-group-name "weather-forecast-hourly" --sagemaker-project-id "$SAGEMAKER_PROJECT_ID" --sagemaker-project-name "$SAGEMAKER_PROJECT_NAME" --s3-bucket "$ARTIFACT_BUCKET"
       - sam package --template-file template.yml --output-template-file package.yml --s3-bucket cw-sam-example
