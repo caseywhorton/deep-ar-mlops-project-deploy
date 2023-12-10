@@ -33,6 +33,8 @@ Resources:
               Action: lambda:InvokeFunction
               Resource: '*'
         - S3CrudPolicy:
+            BucketName: cw-sagemaker-domain-1
+        - S3CrudPolicy:
             BucketName: cw-weather-data-deployment
       DeploymentPreference:
         Type: AllAtOnce
