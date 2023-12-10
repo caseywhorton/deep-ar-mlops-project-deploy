@@ -15,6 +15,8 @@ logging.basicConfig(format=log_format)
 sm_client = boto3.client("sagemaker")
 
 
+
+
 # Fetch latest approved model package for a model package group
 def get_approved_package(model_package_group_name):
     try:
@@ -79,7 +81,19 @@ yaml.SafeLoader.add_constructor("!Sub", sub_constructor)
 yaml.SafeDumper.add_representer(dict, sub_ref_representer)
 yaml.SafeDumper.add_representer(dict, ref_ref_representer)
 
+def add_model_package_name_to_yaml(template_path, model_package_arn):
+    with open(template_path, "r") as file:
+        template = yaml.safe_load(file)
 
+    # Add ModelPackageName to the SageMakerModel Properties
+    template['Resources']['SageMakerModel']['Properties']['Containers'] = [
+        {'ModelPackageName': model_package_arn}
+    ]
+
+    with open(template_path, "w") as file:
+        yaml.dump(template, file, default_flow_style=False)
+
+    
 # Add environment variables to a SAM template
 def add_environment_variables(template_path, function_name, variables):
     with open(template_path, "r") as file:
@@ -119,6 +133,9 @@ if __name__ == "__main__":
     # Fetch model package ARN
     logger.info("Getting model package ARN.")
     model_package_arn = get_approved_package(args.model_package_group_name)
+
+    # Add the model package arn to the resource section
+    add_model_package_name_to_yaml(args.template_path, model_package_arn)
 
     # Create dictionary of environment variables
     logger.info("Creating a dictionary of environment variables.")
