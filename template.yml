@@ -32,13 +32,14 @@ Resources:
             - Effect: Allow
               Action: lambda:InvokeFunction
               Resource: '*'
-            - S3CrudPolicy:
-              BucketName: cw-weather-data-deployment
+        - S3CrudPolicy:
+            BucketName: cw-weather-data-deployment
       DeploymentPreference:
         Type: AllAtOnce
         Hooks:
           PreTraffic: !Ref beforeAllowTraffic
           PostTraffic: !Ref afterAllowTraffic
+
 
   beforeAllowTraffic:
     Type: AWS::Serverless::Function
