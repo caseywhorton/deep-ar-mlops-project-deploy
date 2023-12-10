@@ -107,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument("--log-level", type=str, default=os.environ.get("LOGLEVEL", "INFO").upper())
     parser.add_argument("--model-execution-role", type=str, required=True)
     parser.add_argument("--model-package-group-name", type=str, required=True)
+    parser.add_argument("--model-name", type=str, required=True)
     parser.add_argument("--sagemaker-project-id", type=str, required=True)
     parser.add_argument("--sagemaker-project-name", type=str, required=True)
     parser.add_argument("--s3-bucket", type=str, required=True)
@@ -124,6 +125,7 @@ if __name__ == "__main__":
     env_dict = {
         "MODEL_PACKAGE_ARN": model_package_arn,
         "MODEL_PACKAGE_GROUP_NAME": args.model_package_group_name,
+        "MODEL_NAME": args.model_name,
         "SAGEMAKER_PROJECT_ID": args.sagemaker_project_id,
         "SAGEMAKER_PROJECT_NAME": args.sagemaker_project_name,
     }
