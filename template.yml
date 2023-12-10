@@ -37,7 +37,7 @@ Resources:
             Action: lambda:InvokeFunction
             Resource: '*'
       - S3CrudPolicy:
-          BucketName: !Ref YourS3BucketName
+          BucketName: cw-weather-data-deployment
     DeploymentPreference:
       Type: AllAtOnce
       Hooks:
