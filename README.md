@@ -1,35 +1,44 @@
-## MLOps for SageMaker Endpoint Deployment
+# AWS Pipeline for Lambda Function Batch Transform Job
+This repository contains code for an AWS-based pipeline that automates the creation and deployment of infrastructure necessary to run a Lambda function executing a batch transform job against an approved model version in Amazon SageMaker.
 
-This is a sample code repository for demonstrating how you can organize your code for deploying an realtime inference Endpoint infrastructure. This code repository is created as part of creating a Project in SageMaker. 
+## Overview
+The pipeline utilizes AWS services to create and manage the following components:
 
-This code repository has the code to find the latest approved ModelPackage for the associated ModelPackageGroup and automaticaly deploy it to the Endpoint on detecting a change (`build.py`). This code repository also defines the CloudFormation template which defines the Endpoints as infrastructure. It also has configuration files associated with `staging` and `prod` stages. 
++ Lambda Function: Executes batch transform jobs on SageMaker.
++ AWS CloudFormation: Defines the infrastructure resources.
++ Amazon SageMaker: Hosts the machine learning models.
 
-Upon triggering a deployment, the CodePipeline pipeline will deploy 2 Endpoints - `staging` and `prod`. After the first deployment is completed, the CodePipeline waits for a manual approval step for promotion to the prod stage. You will need to go to CodePipeline AWS Managed Console to complete this step.
+## Setup
+### Prerequisites
+Before setting up the pipeline, ensure you have:
 
-You own this code and you can modify this template to change as you need it, add additional tests for your custom validation. 
++ AWS account credentials and permissions.
++ CodePipeline access and necessary IAM roles.
+Installation Steps
+Clone this repository.
+Navigate to the AWS Management Console and set up the required permissions for CodePipeline, Lambda, and SageMaker.
+Adjust the template.yml file to specify your Lambda function configurations and SageMaker model details.
+Commit the changes and push them to your GitHub repository.
+Usage
+Pipeline Workflow
+CodePipeline monitors the GitHub repository for changes.
+Upon detecting a change, CodePipeline triggers the pipeline.
+AWS CloudFormation creates or updates the necessary infrastructure based on the template.yml.
+Lambda function is deployed or updated in response to the pipeline execution.
+The Lambda function can now run batch transform jobs against approved model versions in Amazon SageMaker.
+Folder Structure
+LambdaFunction: Contains the Lambda function code and configurations.
+InfrastructureAsCode: Holds the CloudFormation template for defining the infrastructure.
+Committing Changes
+When committing changes to this repository:
 
-A description of some of the artifacts is provided below:
+Make modifications to the necessary files, such as template.yml or the Lambda function code.
+Use Git commands (git add ., git commit -m "Your commit message", git push origin main) to push changes to your repository.
+Ensure meaningful commit messages that describe the changes made for better tracking.
+Resources
+AWS CodePipeline Documentation
+AWS CloudFormation Documentation
+Amazon SageMaker Documentation
+License
+This project is licensed under the MIT License.
 
-
-## Layout of the SageMaker ModelBuild Project Template
-
-`buildspec.yml`
- - this file is used by the CodePipeline's Build stage to build a CloudFormation template.
-
-`build.py`
- - this python file contains code to get the latest approve package arn and exports staging and configuration files. This is invoked from the Build stage.
-
-`endpoint-config-template.yml`
- - this CloudFormation template file is packaged by the build step in the CodePipeline and is deployed in different stages.
-
-`staging-config.json`
- - this configuration file is used to customize `staging` stage in the pipeline. You can configure the instance type, instance count here.
-
-`prod-config.json`
- - this configuration file is used to customize `prod` stage in the pipeline. You can configure the instance type, instance count here.
-
-`test\buildspec.yml`
-  - this file is used by the CodePipeline's `staging` stage to run the test code of the following python file
-
-`test\test.py`
-  - this python file contains code to describe and invoke the staging endpoint. You can customize to add more tests here.
