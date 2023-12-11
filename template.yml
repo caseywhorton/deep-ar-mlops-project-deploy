@@ -51,7 +51,7 @@ Resources:
       FunctionName: 'CodeDeployHook_beforeAllowTraffic'
       DeploymentPreference:
         Enabled: false
-      Timeout: 5
+      Timeout: 30
       Policies:
         - Version: "2012-10-17"
           Statement: 
@@ -75,7 +75,7 @@ Resources:
       FunctionName: 'CodeDeployHook_afterAllowTraffic'
       DeploymentPreference:
         Enabled: false
-      Timeout: 5
+      Timeout: 30
       Policies:
         - Version: "2012-10-17"
           Statement: 
