@@ -36,6 +36,10 @@ Resources:
             BucketName: cw-sagemaker-domain-1
         - S3CrudPolicy:
             BucketName: cw-weather-data-deployment
+        - Statement:
+            - Effect: Allow
+              Action: sagemaker:CreateTransformJob
+              Resource: '*'
       DeploymentPreference:
         Type: AllAtOnce
         Hooks:
