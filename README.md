@@ -26,7 +26,30 @@ Upon detecting a change, CodePipeline triggers the pipeline.
 AWS CloudFormation creates or updates the necessary infrastructure based on the template.yml.
 Lambda function is deployed or updated in response to the pipeline execution.
 The Lambda function can now run batch transform jobs against approved model versions in Amazon SageMaker.
-Folder Structure
+## Directory Structure
+```
+├── infra/
+│   ├── pipeline/
+│   │   ├── codepipeline-sam.yaml
+│   │   └── buildspec.yaml
+│   ├── templates/
+│   │   ├── lambda-template.yaml
+│   │   └── sagemaker-template.yaml
+│   └── scripts/
+│       ├── deploy.sh
+│       └── create-infra.py
+├── lambda/
+│   ├── src/
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   ├── tests/
+│   │   ├── test_main.py
+│   │   └── test_helpers.py
+│   └── README.md
+├── docs/
+│   └── README.md
+└── README.md
+```
 LambdaFunction: Contains the Lambda function code and configurations.
 InfrastructureAsCode: Holds the CloudFormation template for defining the infrastructure.
 ### Committing Changes
@@ -37,10 +60,11 @@ When committing changes to this repository:
 + Ensure meaningful commit messages that describe the changes made for better tracking.
 
 # Resources
-+ AWS CodePipeline Documentation
-+ AWS CloudFormation Documentation
-+ Amazon SageMaker Documentation
++ [AWS CodePipeline Documentation](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html)
++ [AWS CloudFormation Documentation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html)
++ [Amazon SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/whatis.html)
 
 ## License
 This project is licensed under the **MIT** License.
 
+[Link Text](https://www.example.com)
