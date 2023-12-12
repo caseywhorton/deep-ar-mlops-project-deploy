@@ -1,12 +1,7 @@
-import json
-import urllib.parse
 import boto3
 import pandas as pd
 from utils.preprocessing import *
-import datetime
-from io import StringIO  # python3; python2: BytesIO
-import io
-from datetime import datetime, timezone, timedelta, date
+from datetime import datetime, timezone, timedelta
 import os
 
 print("Loading function")
