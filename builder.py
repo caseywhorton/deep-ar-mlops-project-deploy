@@ -1,5 +1,4 @@
 import argparse
-import json
 import logging
 import os
 import yaml
@@ -13,8 +12,6 @@ logging.basicConfig(format=log_format)
 
 # AWS client setup
 sm_client = boto3.client("sagemaker")
-
-
 
 
 # Fetch latest approved model package for a model package group
@@ -48,7 +45,9 @@ def get_approved_package(model_package_group_name):
 
         # Return model package ARN
         model_package_arn = approved_packages[0]["ModelPackageArn"]
-        logger.info(f"Identified the latest approved model package: {model_package_arn}")
+        logger.info(
+            f"Identified the latest approved model package: {model_package_arn}"
+        )
         return model_package_arn
     except ClientError as e:
         error_message = e.response["Error"]["Message"]
@@ -81,26 +80,27 @@ yaml.SafeLoader.add_constructor("!Sub", sub_constructor)
 yaml.SafeDumper.add_representer(dict, sub_ref_representer)
 yaml.SafeDumper.add_representer(dict, ref_ref_representer)
 
+
 def add_model_package_name_to_yaml(template_path, model_package_arn):
     with open(template_path, "r") as file:
         template = yaml.safe_load(file)
 
     # Add ModelPackageName to the SageMakerModel Properties
-    template['Resources']['SageMakerModel']['Properties']['Containers'] = [
-        {'ModelPackageName': model_package_arn}
+    template["Resources"]["SageMakerModel"]["Properties"]["Containers"] = [
+        {"ModelPackageName": model_package_arn}
     ]
 
     with open(template_path, "w") as file:
         yaml.dump(template, file, default_flow_style=False)
 
-    
+
 # Add environment variables to a SAM template
 def add_environment_variables(template_path, function_name, variables):
     with open(template_path, "r") as file:
         template = yaml.safe_load(file)
     logger.info(f"variables: {variables}")
     print(template)
-    print('function_name: ', function_name)
+    print("function_name: ", function_name)
     print(template["Resources"])
     if "Resources" in template and function_name in template["Resources"]:
         function = template["Resources"][function_name]
@@ -109,7 +109,7 @@ def add_environment_variables(template_path, function_name, variables):
             function_env.setdefault("Variables", {}).update(variables)
         else:
             function["Properties"]["Environment"] = {"Variables": variables}
-    
+
     with open(template_path, "w") as file:
         yaml.dump(template, file, default_flow_style=False)
 
@@ -117,10 +117,19 @@ def add_environment_variables(template_path, function_name, variables):
 # Main execution
 if __name__ == "__main__":
     # Argument parser setup
-    parser = argparse.ArgumentParser(description="Add environment variables to the SAM template")
-    parser.add_argument("--template-path", type=str, default="template.yml", help="Path to the SAM template file")
+    parser = argparse.ArgumentParser(
+        description="Add environment variables to the SAM template"
+    )
+    parser.add_argument(
+        "--template-path",
+        type=str,
+        default="template.yml",
+        help="Path to the SAM template file",
+    )
     parser.add_argument("--function-name", type=str, help="Name of the Lambda function")
-    parser.add_argument("--log-level", type=str, default=os.environ.get("LOGLEVEL", "INFO").upper())
+    parser.add_argument(
+        "--log-level", type=str, default=os.environ.get("LOGLEVEL", "INFO").upper()
+    )
     parser.add_argument("--model-execution-role", type=str, required=True)
     parser.add_argument("--model-package-group-name", type=str, required=True)
     parser.add_argument("--model-name", type=str, required=True)
@@ -149,14 +158,12 @@ if __name__ == "__main__":
         "SAGEMAKER_PROJECT_NAME": args.sagemaker_project_name,
     }
 
-    
-
     # Add environment variables to file
     logger.info(f"Adding environment variables to file: {args.template_path}")
     add_environment_variables(args.template_path, args.function_name, env_dict)
-    
+
     with open(args.template_path, "r") as file:
         template = yaml.safe_load(file)
-        
+
     logger.info("template.yml")
     logger.info(template)
