@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 import pandas as pd
 import boto3
 from utils.preprocessing import getStart, getStartString, featureDict, columnNameReformat, preprocessQuant, dict_to_series, series_to_jsonline
-from params import FEATURES, S3_SERVING_PREVIX_URL, S3_SERVING_INPUT_URL, S3_FORECAST_OUTPUT_URL
+from params import FEATURES, S3_SERVING_PREFIX_URI, S3_SERVING_INPUT_URI, S3_FORECAST_PREFIX_URI
 
 
 def lambda_handler(event, context):
@@ -69,7 +69,7 @@ def lambda_handler(event, context):
         # Copy file to S3
         copy_to_s3(
             "/tmp/" + file_name,
-            "s3://cw-weather-data-deployment/serving/" + file_name,
+            S3_SERVING_PREFIX_URL + file_name,
             override=True,
         )
 
@@ -94,7 +94,7 @@ def lambda_handler(event, context):
                 "DataSource": {
                     "S3DataSource": {
                         "S3DataType": "S3Prefix",
-                        "S3Uri": "s3://cw-weather-data-deployment/serving/serving.json",
+                        "S3Uri": S3_SERVING_INPUT_URI,
                     }
                 },
                 "ContentType": "application/jsonlines",
@@ -102,7 +102,7 @@ def lambda_handler(event, context):
                 "SplitType": "None",
             },
             TransformOutput={
-                "S3OutputPath": "s3://cw-weather-data-deployment/forecasts/",
+                "S3OutputPath": S3_FORECAST_PREFIX_URI,
                 "Accept": "application/jsonlines",
                 "AssembleWith": "Line",
             },
@@ -117,26 +117,6 @@ def lambda_handler(event, context):
         raise e
 
     return {"statusCode": 200, "body": "Lambda execution completed"}
-
-def copy_to_s3(local_file, s3_path, override=False):
-    s3 = boto3.resource("s3")
-    assert s3_path.startswith("s3://")
-    split = s3_path.split("/")
-    bucket = split[2]
-    path = "/".join(split[3:])
-    buk = s3.Bucket(bucket)
-    if len(list(buk.objects.filter(Prefix=path))) > 0:
-        if not override:
-            print(
-                "File s3://{}/{} already exists.\nSet override to upload anyway.\n".format(
-                    bucket, s3_path
-                )
-            )
-            return
-        else:
-            print("Overwriting existing file")
-    with open(local_file, "rb") as data:
-        print("Uploading file to {}".format(s3_path))
         try:
             buk.put_object(Key=path, Body=data)
         except:
