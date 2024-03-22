@@ -69,7 +69,7 @@ def lambda_handler(event, context):
         # Copy file to S3
         copy_to_s3(
             "/tmp/" + file_name,
-            S3_SERVING_PREFIX_URL + file_name,
+            S3_SERVING_PREFIX_URI + file_name,
             override=True,
         )
 
