@@ -2,7 +2,6 @@
 
 This repository contains code for an AWS-based pipeline that automates the creation and deployment of infrastructure necessary to run a Lambda function. This Lambda function executes a batch transform job against an approved model version hosted in Amazon SageMaker. The pipeline orchestrates the entire setup, leveraging AWS services to streamline the creation, configuration, and deployment of the infrastructure required for seamless execution.
 
-
 ## Overview
 
 The pipeline utilizes AWS services to create and manage the following components:
