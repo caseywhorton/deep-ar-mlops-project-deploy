@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import boto3
-from utils.preprocessing import getStart, columnNameReformat, preprocessQuant, dictToSeries, seriesToJSONline
+from utils.preprocessing import getStart, columnNameReformat, preprocessQuant, dictToSeries, seriesToJSONline, roundUpHour
 from params import FEATURES, S3_SERVING_PREFIX_URI, S3_SERVING_INPUT_URI, S3_FORECAST_PREFIX_URI
 
 def lambda_handler(event, context):
