@@ -2,9 +2,8 @@ import os
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import boto3
-from utils.preprocessing import getStart, getStartString, featureDict, columnNameReformat, preprocessQuant, dictToSeries, seriesToJSONline
+from utils.preprocessing import getStart, columnNameReformat, preprocessQuant, dictToSeries, seriesToJSONline
 from params import FEATURES, S3_SERVING_PREFIX_URI, S3_SERVING_INPUT_URI, S3_FORECAST_PREFIX_URI
-
 
 def lambda_handler(event, context):
     try:
@@ -31,79 +30,32 @@ def lambda_handler(event, context):
         today = datetime.now(timezone.utc)
         lag_days = datetime.now(timezone.utc) + timedelta(days=-day_window)
 
-         # get preprocessed weather data
-        objects = s3.list_objects(Bucket=bucket_weather_data, Prefix=prefix)
-    
-        df_list = []
-        for o in objects["Contents"]:
-            if o["LastModified"] <= today and o["LastModified"] >= lag_days:
-                obj = s3.get_object(Bucket=bucket_weather_data, Key=o["Key"])
-                df_list.append(pd.read_csv(obj["Body"]))
-    
-        weather_df = pd.concat(df_list).drop_duplicates().reset_index()
-        weather_df.columns = [columnNameReformat(x) for x in weather_df.columns]
-        weather_df.timestamp = weather_df.timestamp.apply(
-            lambda x: roundUpHour(x))
-        weather_df.index = weather_df.timestamp
-        weather_df.drop(['index', 'timestamp'], axis=1, inplace=True)
-    
-        # get preprocessed electric data
-    
-        objects = s3.list_objects(Bucket=bucket_electric_data, Prefix=prefix)
-        df_list = []
-        for o in objects["Contents"]:
-            if o["LastModified"] <= today and o["LastModified"] >= lag_days:
-                obj = s3.get_object(Bucket=bucket_electric_data, Key=o["Key"])
-                df_list.append(pd.read_csv(obj["Body"]))
-    
-        electricity_df = pd.concat(df_list).drop_duplicates().reset_index()
-        electricity_df.columns = [columnNameReformat(
-            x) for x in electricity_df.columns]
+        # Get preprocessed weather data
+        weather_df = get_preprocessed_data(s3, bucket_weather_data, prefix, today, lag_days)
+
+        # Get preprocessed electric data
+        electricity_df = get_preprocessed_data(s3, bucket_electric_data, prefix, today, lag_days)
         electricity_df.rename(columns={'period': 'timestamp'}, inplace=True)
-        electricity_df.index = electricity_df.timestamp
-        electricity_df.drop(['index', 'timestamp'], axis=1, inplace=True)
-    
-        X = weather_df[weather_features].merge(
-            electricity_df[electricity_features], how='inner', left_index=True, right_index=True)
-        # get the starting timestamp from the joined data
-        start = start_str = getStart(X)
+
+        # Merge weather and electricity data
+        X = weather_df[weather_features].merge(electricity_df[electricity_features], how='inner', left_index=True, right_index=True)
+
+        # Get the starting timestamp from the joined data
+        start = getStartString(X)
         print(start)
-    
-        # preprocess the feature data
-        mylist = list()
-    
-        # should only be the target columns
-        for feature in X.columns:
-            mylist.append(
-                featureDict(
-                    start_datetime=start_str,
-                    feature_data=preprocessQuant(X[feature]),
-                )
-            )
-    
-        # create the individual time series for each feature
-        time_series = []
-        for i in mylist:
-            time_series.append(dictToSeries(i))
-    
+
+        # Preprocess the feature data
+        time_series = [dictToSeries(featureDict(start_datetime=start, feature_data=preprocessQuant(X[feature]))) for feature in X.columns]
+
         # Write time series data to a JSONLines file
-        encoding = "utf-8"
         file_name = "serving.json"
         with open("/tmp/" + file_name, "wb") as f:
-            for i, ts in enumerate(time_series):
-                f.write(
-                    seriesToJSONline(
-                        ts, feature_name=list(mylist[i].keys())[1]
-                    ).encode(encoding)
-                )
+            for ts in time_series:
+                f.write(seriesToJSONline(ts, feature_name=list(ts.keys())[1]).encode(encoding))
                 f.write("\n".encode(encoding))
 
         # Copy file to S3
-        copy_to_s3(
-            "/tmp/" + file_name,
-            S3_SERVING_PREFIX_URI + file_name,
-            override=True,
-        )
+        copy_to_s3("/tmp/" + file_name, S3_SERVING_PREFIX_URI + file_name, override=True)
 
         # Create a timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -149,7 +101,28 @@ def lambda_handler(event, context):
         raise e
 
     return {"statusCode": 200, "body": "Lambda execution completed"}
-        try:
-            buk.put_object(Key=path, Body=data)
-        except:
-            print("could not put object to s3")
+
+def get_preprocessed_data(s3, bucket, prefix, today, lag_days):
+    objects = s3.list_objects(Bucket=bucket, Prefix=prefix)
+    df_list = []
+    for o in objects["Contents"]:
+        if o["LastModified"] <= today and o["LastModified"] >= lag_days:
+            obj = s3.get_object(Bucket=bucket, Key=o["Key"])
+            df_list.append(pd.read_csv(obj["Body"]))
+    df = pd.concat(df_list).drop_duplicates().reset_index()
+    df.columns = [columnNameReformat(x) for x in df.columns]
+    df.timestamp = df.timestamp.apply(lambda x: roundUpHour(x))
+    df.index = df.timestamp
+    df.drop(['index', 'timestamp'], axis=1, inplace=True)
+    return df
+
+def copy_to_s3(local_path, s3_uri, override=False):
+    s3 = boto3.resource('s3')
+    bucket = s3_uri.split('/')[2]
+    key = '/'.join(s3_uri.split('/')[3:])
+    if not override:
+        response = s3.meta.client.list_objects_v2(Bucket=bucket, Prefix=key)
+        if response.get('Contents'):
+            print(f"File {s3_uri} already exists in S3, skipping...")
+            return
+   
