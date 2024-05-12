@@ -2,9 +2,8 @@ import os
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import boto3
-from utils.preprocessing import getStart, getStartString, featureDict, columnNameReformat, preprocessQuant, dict_to_series, series_to_jsonline
+from utils.preprocessing import getStart, columnNameReformat, preprocessQuant, dictToSeries, seriesToJSONline
 from params import FEATURES, S3_SERVING_PREFIX_URI, S3_SERVING_INPUT_URI, S3_FORECAST_PREFIX_URI
-
 
 def lambda_handler(event, context):
     try:
@@ -17,61 +16,46 @@ def lambda_handler(event, context):
         print("Model name: {}".format(model_name))
 
         # Set S3 bucket and prefix
-        bucket = "cw-sagemaker-domain-1"
+        bucket_weather_data = "cw-sagemaker-domain-1"
+        bucket_electric_data = "cw-electric-demand-hourly-preprocessed"
         prefix = "deep_ar/data/raw"
 
+        electricity_features = ['value_demand']
+        weather_features = ['temperature_value', 'relativehumidity_value']
+
+        encoding = 'utf-8'
+
         # Get rolling calendar year of data
+        day_window = 180
         today = datetime.now(timezone.utc)
-        lag_365 = datetime.now(timezone.utc) + timedelta(days=-365)
+        lag_days = datetime.now(timezone.utc) + timedelta(days=-day_window)
 
-        # List objects in S3 bucket
-        objects = s3.list_objects(Bucket=bucket, Prefix=prefix)["Contents"]
+        # Get preprocessed weather data
+        weather_df = get_preprocessed_data(s3, bucket_weather_data, prefix, today, lag_days)
 
-        df_list = []
-        for o in objects:
-            if lag_365 <= o["LastModified"] <= today:
-                obj = s3.get_object(Bucket=bucket, Key=o["Key"])
-                df_list.append(pd.read_csv(obj["Body"]))
+        # Get preprocessed electric data
+        electricity_df = get_preprocessed_data(s3, bucket_electric_data, prefix, today, lag_days)
+        electricity_df.rename(columns={'period': 'timestamp'}, inplace=True)
 
-        # Concatenate dataframes, drop duplicates, and reset index
-        preprocessed_df = pd.concat(df_list).drop_duplicates().reset_index()
+        # Merge weather and electricity data
+        X = weather_df[weather_features].merge(electricity_df[electricity_features], how='inner', left_index=True, right_index=True)
 
-        # Get start date from preprocessed data's index
-        start = getStart(preprocessed_df)
-        start_str = getStartString(preprocessed_df)
+        # Get the starting timestamp from the joined data
+        start = getStartString(X)
+        print(start)
 
-        # Process features
-        mylist = []
-        for feature in FEATURES:
-            mylist.append(
-                featureDict(
-                    start_str,
-                    columnNameReformat(feature, "properties.relativeHumidity.value"),
-                    preprocessQuant(preprocessed_df[feature]),
-                )
-            )
-
-        # Convert feature dictionaries to time series
-        time_series = [dict_to_series(i) for i in mylist]
+        # Preprocess the feature data
+        time_series = [dictToSeries(featureDict(start_datetime=start, feature_data=preprocessQuant(X[feature]))) for feature in X.columns]
 
         # Write time series data to a JSONLines file
-        encoding = "utf-8"
         file_name = "serving.json"
         with open("/tmp/" + file_name, "wb") as f:
-            for i, ts in enumerate(time_series):
-                f.write(
-                    series_to_jsonline(
-                        ts, feature_name=list(mylist[i].keys())[1]
-                    ).encode(encoding)
-                )
+            for ts in time_series:
+                f.write(seriesToJSONline(ts, feature_name=list(ts.keys())[1]).encode(encoding))
                 f.write("\n".encode(encoding))
 
         # Copy file to S3
-        copy_to_s3(
-            "/tmp/" + file_name,
-            S3_SERVING_PREFIX_URI + file_name,
-            override=True,
-        )
+        copy_to_s3("/tmp/" + file_name, S3_SERVING_PREFIX_URI + file_name, override=True)
 
         # Create a timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -117,7 +101,28 @@ def lambda_handler(event, context):
         raise e
 
     return {"statusCode": 200, "body": "Lambda execution completed"}
-        try:
-            buk.put_object(Key=path, Body=data)
-        except:
-            print("could not put object to s3")
+
+def get_preprocessed_data(s3, bucket, prefix, today, lag_days):
+    objects = s3.list_objects(Bucket=bucket, Prefix=prefix)
+    df_list = []
+    for o in objects["Contents"]:
+        if o["LastModified"] <= today and o["LastModified"] >= lag_days:
+            obj = s3.get_object(Bucket=bucket, Key=o["Key"])
+            df_list.append(pd.read_csv(obj["Body"]))
+    df = pd.concat(df_list).drop_duplicates().reset_index()
+    df.columns = [columnNameReformat(x) for x in df.columns]
+    df.timestamp = df.timestamp.apply(lambda x: roundUpHour(x))
+    df.index = df.timestamp
+    df.drop(['index', 'timestamp'], axis=1, inplace=True)
+    return df
+
+def copy_to_s3(local_path, s3_uri, override=False):
+    s3 = boto3.resource('s3')
+    bucket = s3_uri.split('/')[2]
+    key = '/'.join(s3_uri.split('/')[3:])
+    if not override:
+        response = s3.meta.client.list_objects_v2(Bucket=bucket, Prefix=key)
+        if response.get('Contents'):
+            print(f"File {s3_uri} already exists in S3, skipping...")
+            return
+   
