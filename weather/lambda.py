@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import boto3
-from utils.preprocessing import getStart, getStartString, featureDict, columnNameReformat, preprocessQuant, dict_to_series, series_to_jsonline
+from utils.preprocessing import getStart, getStartString, featureDict, columnNameReformat, preprocessQuant, dictToSeries, seriesToJSONline
 from params import FEATURES, S3_SERVING_PREFIX_URI, S3_SERVING_INPUT_URI, S3_FORECAST_PREFIX_URI
 
 
@@ -17,50 +17,82 @@ def lambda_handler(event, context):
         print("Model name: {}".format(model_name))
 
         # Set S3 bucket and prefix
-        bucket = "cw-sagemaker-domain-1"
+        bucket_weather_data = "cw-sagemaker-domain-1"
+        bucket_electric_data = "cw-electric-demand-hourly-preprocessed"
         prefix = "deep_ar/data/raw"
 
+        electricity_features = ['value_demand']
+        weather_features = ['temperature_value', 'relativehumidity_value']
+
+        encoding = 'utf-8'
+
         # Get rolling calendar year of data
+        day_window = 180
         today = datetime.now(timezone.utc)
-        lag_365 = datetime.now(timezone.utc) + timedelta(days=-365)
+        lag_days = datetime.now(timezone.utc) + timedelta(days=-day_window)
 
-        # List objects in S3 bucket
-        objects = s3.list_objects(Bucket=bucket, Prefix=prefix)["Contents"]
-
+         # get preprocessed weather data
+        objects = s3.list_objects(Bucket=bucket_weather_data, Prefix=prefix)
+    
         df_list = []
-        for o in objects:
-            if lag_365 <= o["LastModified"] <= today:
-                obj = s3.get_object(Bucket=bucket, Key=o["Key"])
+        for o in objects["Contents"]:
+            if o["LastModified"] <= today and o["LastModified"] >= lag_days:
+                obj = s3.get_object(Bucket=bucket_weather_data, Key=o["Key"])
                 df_list.append(pd.read_csv(obj["Body"]))
-
-        # Concatenate dataframes, drop duplicates, and reset index
-        preprocessed_df = pd.concat(df_list).drop_duplicates().reset_index()
-
-        # Get start date from preprocessed data's index
-        start = getStart(preprocessed_df)
-        start_str = getStartString(preprocessed_df)
-
-        # Process features
-        mylist = []
-        for feature in FEATURES:
+    
+        weather_df = pd.concat(df_list).drop_duplicates().reset_index()
+        weather_df.columns = [columnNameReformat(x) for x in weather_df.columns]
+        weather_df.timestamp = weather_df.timestamp.apply(
+            lambda x: roundUpHour(x))
+        weather_df.index = weather_df.timestamp
+        weather_df.drop(['index', 'timestamp'], axis=1, inplace=True)
+    
+        # get preprocessed electric data
+    
+        objects = s3.list_objects(Bucket=bucket_electric_data, Prefix=prefix)
+        df_list = []
+        for o in objects["Contents"]:
+            if o["LastModified"] <= today and o["LastModified"] >= lag_days:
+                obj = s3.get_object(Bucket=bucket_electric_data, Key=o["Key"])
+                df_list.append(pd.read_csv(obj["Body"]))
+    
+        electricity_df = pd.concat(df_list).drop_duplicates().reset_index()
+        electricity_df.columns = [columnNameReformat(
+            x) for x in electricity_df.columns]
+        electricity_df.rename(columns={'period': 'timestamp'}, inplace=True)
+        electricity_df.index = electricity_df.timestamp
+        electricity_df.drop(['index', 'timestamp'], axis=1, inplace=True)
+    
+        X = weather_df[weather_features].merge(
+            electricity_df[electricity_features], how='inner', left_index=True, right_index=True)
+        # get the starting timestamp from the joined data
+        start = start_str = getStart(X)
+        print(start)
+    
+        # preprocess the feature data
+        mylist = list()
+    
+        # should only be the target columns
+        for feature in X.columns:
             mylist.append(
                 featureDict(
-                    start_str,
-                    columnNameReformat(feature, "properties.relativeHumidity.value"),
-                    preprocessQuant(preprocessed_df[feature]),
+                    start_datetime=start_str,
+                    feature_data=preprocessQuant(X[feature]),
                 )
             )
-
-        # Convert feature dictionaries to time series
-        time_series = [dict_to_series(i) for i in mylist]
-
+    
+        # create the individual time series for each feature
+        time_series = []
+        for i in mylist:
+            time_series.append(dictToSeries(i))
+    
         # Write time series data to a JSONLines file
         encoding = "utf-8"
         file_name = "serving.json"
         with open("/tmp/" + file_name, "wb") as f:
             for i, ts in enumerate(time_series):
                 f.write(
-                    series_to_jsonline(
+                    seriesToJSONline(
                         ts, feature_name=list(mylist[i].keys())[1]
                     ).encode(encoding)
                 )
