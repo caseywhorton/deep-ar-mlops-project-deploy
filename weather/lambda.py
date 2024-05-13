@@ -47,7 +47,7 @@ def lambda_handler(event, context):
         # Merge weather and electricity data
         X = weather_df[WEATHER_FEATURES].merge(electricity_df[ELECTRICITY_FEATURES], how='inner', left_index=True, right_index=True)
         # Get the starting timestamp from the joined data
-        start = getStartString(X)
+        start = getStart(X)
 
         # Preprocess the feature data
         time_series = [dictToSeries(featureDict(start_datetime=start, feature_data=preprocessQuant(X[feature]))) for feature in X.columns]
