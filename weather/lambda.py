@@ -2,8 +2,8 @@ import os
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import boto3
-from utils.preprocessing import getStart, columnNameReformat, preprocessQuant, dictToSeries, seriesToJSONline, roundUpHour
-from params import FEATURES, S3_SERVING_PREFIX_URI, S3_SERVING_INPUT_URI, S3_FORECAST_PREFIX_URI
+from utils.preprocessing import getStart, getStartString, columnNameReformat, preprocessQuant, dictToSeries, seriesToJSONline, roundUpHour
+from params import WEATHER_FEATURES, ELECTRICITY_FEATURES, S3_SERVING_PREFIX_URI, S3_SERVING_INPUT_URI, S3_FORECAST_PREFIX_URI
 
 def lambda_handler(event, context):
     try:
@@ -20,9 +20,6 @@ def lambda_handler(event, context):
         bucket_electric_data = "cw-electric-demand-hourly-preprocessed"
         prefix = "deep_ar/data/raw"
 
-        electricity_features = ['value_demand']
-        weather_features = ['temperature_value', 'relativehumidity_value']
-
         encoding = 'utf-8'
 
         # Get rolling calendar year of data
@@ -32,17 +29,25 @@ def lambda_handler(event, context):
 
         # Get preprocessed weather data
         weather_df = get_preprocessed_data(s3, bucket_weather_data, prefix, today, lag_days)
-
         # Get preprocessed electric data
-        electricity_df = get_preprocessed_data(s3, bucket_electric_data, prefix, today, lag_days)
+        objects = s3.list_objects(Bucket=bucket_electric_data, Prefix=prefix)
+        df_list = []
+        for o in objects["Contents"]:
+            if o["LastModified"] <= today and o["LastModified"] >= lag_days:
+                obj = s3.get_object(Bucket=bucket_electric_data, Key=o["Key"])
+                df_list.append(pd.read_csv(obj["Body"]))
+    
+        electricity_df = pd.concat(df_list).drop_duplicates().reset_index()
+        electricity_df.columns = [columnNameReformat(
+            x) for x in electricity_df.columns]
         electricity_df.rename(columns={'period': 'timestamp'}, inplace=True)
+        electricity_df.index = electricity_df.timestamp
+        electricity_df.drop(['index', 'timestamp'], axis=1, inplace=True)
 
         # Merge weather and electricity data
-        X = weather_df[weather_features].merge(electricity_df[electricity_features], how='inner', left_index=True, right_index=True)
-
+        X = weather_df[WEATHER_FEATURES].merge(electricity_df[ELECTRICITY_FEATURES], how='inner', left_index=True, right_index=True)
         # Get the starting timestamp from the joined data
         start = getStartString(X)
-        print(start)
 
         # Preprocess the feature data
         time_series = [dictToSeries(featureDict(start_datetime=start, feature_data=preprocessQuant(X[feature]))) for feature in X.columns]
