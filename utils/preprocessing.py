@@ -154,6 +154,36 @@ def dictToSeries(time_dict: dict) -> pd.Series:
     return pd.Series(data=list(time_dict.values())[1], index=time_index)
 
 
+def getPreprocessedWeatherData(s3, bucket, prefix, today, lag_days):
+    objects = s3.list_objects(Bucket=bucket, Prefix=prefix)
+    df_list = []
+    for o in objects["Contents"]:
+        if o["LastModified"] <= today and o["LastModified"] >= lag_days:
+            obj = s3.get_object(Bucket=bucket, Key=o["Key"])
+            df_list.append(pd.read_csv(obj["Body"]))
+    df = pd.concat(df_list).drop_duplicates().reset_index()
+    df.columns = [columnNameReformat(x) for x in df.columns]
+    df.timestamp = df.timestamp.apply(lambda x: roundUpHour(x))
+    df.index = df.timestamp
+    df.drop(['index', 'timestamp'], axis=1, inplace=True)
+    return df
+    
+def getPreprocessedElectricityData(s3, bucket, prefix, today, lag_days):
+    objects = s3.list_objects(Bucket=bucket, Prefix=prefix)
+    df_list = []
+    for o in objects["Contents"]:
+        if o["LastModified"] <= today and o["LastModified"] >= lag_days:
+            obj = s3.get_object(Bucket=bucket, Key=o["Key"])
+            df_list.append(pd.read_csv(obj["Body"]))
+
+    df = pd.concat(df_list).drop_duplicates().reset_index()
+    df.columns = [columnNameReformat(
+        x) for x in df.columns]
+    df.rename(columns={'period': 'timestamp'}, inplace=True)
+    df.index = df.timestamp
+    df.drop(['index', 'timestamp'], axis=1, inplace=True)
+    return df
+
 def copyToS3(local_file, s3_path, override=False):
     s3 = boto3.resource("s3")
     assert s3_path.startswith("s3://")
