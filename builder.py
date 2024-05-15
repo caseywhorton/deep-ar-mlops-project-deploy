@@ -136,6 +136,15 @@ if __name__ == "__main__":
     parser.add_argument("--sagemaker-project-id", type=str, required=True)
     parser.add_argument("--sagemaker-project-name", type=str, required=True)
     parser.add_argument("--s3-bucket", type=str, required=True)
+    parser.add_argument("--import-staging-config", type=str, default="staging-config.json")
+    parser.add_argument("--import-prod-config", type=str, default="prod-config.json")
+    parser.add_argument("--export-staging-config", type=str, default="staging-config-export.json")
+    parser.add_argument("--export-staging-params", type=str, default="staging-params-export.json")
+    parser.add_argument("--export-staging-tags", type=str, default="staging-tags-export.json")
+    parser.add_argument("--export-prod-config", type=str, default="prod-config-export.json")
+    parser.add_argument("--export-prod-params", type=str, default="prod-params-export.json")
+    parser.add_argument("--export-prod-tags", type=str, default="prod-tags-export.json")
+    parser.add_argument("--export-cfn-params-tags", type=bool, default=False)
     args = parser.parse_args()
 
     # Set log level
@@ -161,6 +170,24 @@ if __name__ == "__main__":
     # Add environment variables to file
     logger.info(f"Adding environment variables to file: {args.template_path}")
     add_environment_variables(args.template_path, args.function_name, env_dict)
+
+    # Write the staging config
+    with open(args.import_staging_config, "r") as f:
+        staging_config = extend_config(args, model_package_arn, json.load(f))
+    logger.debug("Staging config: {}".format(json.dumps(staging_config, indent=4)))
+    with open(args.export_staging_config, "w") as f:
+        json.dump(staging_config, f, indent=4)
+    if (args.export_cfn_params_tags):
+      create_cfn_params_tags_file(staging_config, args.export_staging_params, args.export_staging_tags)
+
+    # Write the prod config for code pipeline
+    with open(args.import_prod_config, "r") as f:
+        prod_config = extend_config(args, model_package_arn, json.load(f))
+    logger.debug("Prod config: {}".format(json.dumps(prod_config, indent=4)))
+    with open(args.export_prod_config, "w") as f:
+        json.dump(prod_config, f, indent=4)
+    if (args.export_cfn_params_tags):
+      create_cfn_params_tags_file(prod_config, args.export_prod_params, args.export_prod_tags)
 
     with open(args.template_path, "r") as file:
         template = yaml.safe_load(file)
