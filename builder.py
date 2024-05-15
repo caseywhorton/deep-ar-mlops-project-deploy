@@ -79,7 +79,10 @@ def extend_config(args, model_package_arn, stage_config):
     }
     # Add tags from Project
     get_pipeline_custom_tags(args, sm_client, new_tags)
-
+    logger.info(
+        f"stage_config parameters: {stage_config["Parameters"]}"
+        f"stage_config new_params: {new_params}"
+    )
     return {
         "Parameters": {**stage_config["Parameters"], **new_params},
         "Tags": {**stage_config.get("Tags", {}), **new_tags},
@@ -264,3 +267,7 @@ if __name__ == "__main__":
 
     logger.info("template.yml")
     logger.info(template)
+    logger.info("staging config")
+    logger.info(staging_config)
+    logger.info("prod config")
+    logger.info(prod_config)
