@@ -53,8 +53,11 @@ def lambda_handler(event, context):
         # Copy file to S3
         copyToS3("/tmp/" + file_name, S3_SERVING_PREFIX_URI + file_name, override=True)
 
+        # Create a timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        
         # Create the TransformJobName with a timestamp
-        transform_job_name = f"WeatherBatchTransform-{datetime.now().strftime("%Y-%m-%d-%H-%M-%S")}"
+        transform_job_name = f"WeatherBatchTransform-{timestamp}"
         
         # Create transform job
         response = client.create_transform_job(
