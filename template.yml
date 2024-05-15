@@ -9,6 +9,10 @@ Parameters:
   ModelNameParameter:
     Type: String
     Description: Enter the name of the model
+  StageName:
+    Type: String
+    Description: 
+      The name for the pipeline stage.
 
 Resources:
   SageMakerModel:
