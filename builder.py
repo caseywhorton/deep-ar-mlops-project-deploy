@@ -55,6 +55,50 @@ def get_approved_package(model_package_group_name):
         raise Exception(error_message)
 
 
+def extend_config(args, model_package_arn, stage_config):
+    """
+    Extend the stage configuration with additional parameters and tags based.
+    """
+    # Verify that config has parameters and tags sections
+    if not "Parameters" in stage_config or not "StageName" in stage_config["Parameters"]:
+        raise Exception("Configuration file must include SageName parameter")
+    if not "Tags" in stage_config:
+        stage_config["Tags"] = {}
+    # Create new params and tags
+    new_params = {
+        "SageMakerProjectName": args.sagemaker_project_name,
+        "ModelPackageName": model_package_arn,
+        "ModelExecutionRoleArn": args.model_execution_role,
+        "DataCaptureUploadPath": "s3://" + args.s3_bucket + '/datacapture-' + stage_config["Parameters"]["StageName"],
+    }
+    new_tags = {
+        "sagemaker:deployment-stage": stage_config["Parameters"]["StageName"],
+        "sagemaker:project-id": args.sagemaker_project_id,
+        "sagemaker:project-name": args.sagemaker_project_name,
+    }
+    # Add tags from Project
+    get_pipeline_custom_tags(args, sm_client, new_tags)
+
+    return {
+        "Parameters": {**stage_config["Parameters"], **new_params},
+        "Tags": {**stage_config.get("Tags", {}), **new_tags},
+    }
+
+def get_pipeline_custom_tags(args, sm_client, new_tags):
+    try:
+        response = sm_client.describe_project(
+            ProjectName=args.sagemaker_project_name
+        )
+        sagemaker_project_arn = response["ProjectArn"]
+        response = sm_client.list_tags(
+                ResourceArn=sagemaker_project_arn)
+        project_tags = response["Tags"]
+        for project_tag in project_tags:
+            new_tags[project_tag["Key"]] = project_tag["Value"]
+    except:
+        logger.error("Error getting project tags")
+    return new_tags
+
 # Custom constructor and representer for !Ref and !Sub tags
 def ref_constructor(loader, node):
     value = loader.construct_scalar(node)
@@ -112,6 +156,31 @@ def add_environment_variables(template_path, function_name, variables):
 
     with open(template_path, "w") as file:
         yaml.dump(template, file, default_flow_style=False)
+
+def get_cfn_style_config(stage_config):
+    parameters = []
+    for key, value in stage_config["Parameters"].items():
+        parameter = {
+            "ParameterKey": key,
+            "ParameterValue": value
+        }
+        parameters.append(parameter)
+    tags = []
+    for key, value in stage_config["Tags"].items():
+        tag = {
+            "Key": key,
+            "Value": value
+        }
+        tags.append(tag)
+    return parameters, tags
+
+def create_cfn_params_tags_file(config, export_params_file, export_tags_file):
+    # Write Params and tags in separate file for Cfn cli command
+    parameters, tags = get_cfn_style_config(config)
+    with open(export_params_file, "w") as f:
+        json.dump(parameters, f, indent=4)
+    with open(export_tags_file, "w") as f:
+        json.dump(tags, f, indent=4)
 
 
 # Main execution
