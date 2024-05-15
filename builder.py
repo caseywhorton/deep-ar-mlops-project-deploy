@@ -4,6 +4,7 @@ import os
 import yaml
 import boto3
 from botocore.exceptions import ClientError
+import json
 
 # Set up logging
 logger = logging.getLogger(__name__)
