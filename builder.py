@@ -80,8 +80,7 @@ def extend_config(args, model_package_arn, stage_config):
     # Add tags from Project
     get_pipeline_custom_tags(args, sm_client, new_tags)
     logger.info(
-        f"stage_config parameters: {stage_config["Parameters"]}"
-        f"stage_config new_params: {new_params}"
+        f"stage_config parameters: {stage_config}"
     )
     return {
         "Parameters": {**stage_config["Parameters"], **new_params},
