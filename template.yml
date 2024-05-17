@@ -11,6 +11,8 @@ Parameters:
     Description: Enter the name of the model
   StageName:
     Type: String
+    AllowedValues: [staging, prod]
+    Default: staging
     Description: 
       The name for the pipeline stage.
 
